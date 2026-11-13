@@ -1,0 +1,158 @@
+/-
+Completeness propagation for the key-merging boundary.
+
+The `Exhaustive` fact of `SplitAlgebra.Rectangle` is domain-relative and fully
+mechanized; the `complete_over` fact is *population*-relative and was
+left unmechanized (see the doc comment on `SplitAlgebra.Exhaustive`).  This file
+gives it the honest mechanization: completeness is relative to a **reference
+table** `R` that stands for the intended full population, and a table `T` is
+complete when it has a row wherever the reference does.
+
+Two results are proved here.  First, `demote` (the algebra's `demote`,
+`SplitAlgebra.demote`) **propagates** completeness from the fine key `K × D` to
+the coarse key `K`, *relative to a reference that coarsens with the table*
+(`demote_completeWrt`).  Fiber-level completeness sharpens what that does and does not
+give: the fact the checker's qualifier tracks is fiber-level completeness
+against a **fixed** reference, and that fact does not survive a genuine
+coarsening (the fiber-gap counterexample recorded at the end of this
+file), which is why the checker clears the qualifier at a coarsening
+`demote` and the establishment step sits after it.  The *demand* stays on the reducing `map_bags` downstream,
+and `demote` remains responsible only for its lineage break
+(`demote_not_preservesDisjoint`).
+
+Second, the **trivial discharge at `card <= 1`**: `CompleteWrt` is key
+coverage (no key the population has is absent), but the fact a *fold* needs
+is fiber-level (no group it folds is partial), mechanized here as
+`FiberCompleteWrt`.  When the population itself is `Functional` (the identity discipline: at most one observation per identity exists in the
+world) and the table holds only genuine observations, every present key
+carries its whole fiber (`fiberCompleteWrt_of_functional`): a singleton
+group is either absent or whole, never partial.  This is the base case the
+checker uses to accept a reducing `map_bags` over a `singletons` store's
+full key with no establishment step, and, applied at the
+post-move key, it is also what re-derives the qualifier when a key move's
+result is graded `singletons`, keeping `promote`/`demote` a
+true inverse pair on the whole qualifier vector.
+-/
+
+import SplitAlgebra.Core.Ops
+import SplitAlgebra.Reshape
+
+namespace SplitAlgebra
+
+variable {K H : Type _} {σ : H → Type}
+variable {D : Type _} [Fintype D]
+
+/-- **Population-relative completeness**.
+`T` is complete with respect to a reference table `R` when every key present in
+`R` is present in `T`: no row the population has is missing from `T`.  The
+reference `R` is what "should be there"; `complete_over(k)` is the instance
+where `R` and `T` are keyed by the coarsening `k`. -/
+def CompleteWrt (R T : Table K H σ) : Prop := ∀ k, R.Present k → T.Present k
+
+/-- Reflexivity: every table is complete with respect to itself. -/
+theorem completeWrt_refl (T : Table K H σ) : CompleteWrt T T := fun _ h => h
+
+/-- **`demote` propagates reference-relative completeness.**  If
+`T` is complete with respect to a reference `R` at the fine key `K × D`,
+then `demote T` is complete with respect to `demote R` at the coarse key
+`K`.  Coarsening keeps "nothing is missing": a coarse group is present
+exactly when some fine key in its fibre is present, and completeness
+carries that fine presence from `R` to `T`.  Note the reference coarsens
+**with** the table; this is *not* the fact the checker's qualifier tracks
+(fiber-level completeness against a fixed reference, which a coarsening
+destroys: the counterexample at the end of this file). -/
+theorem demote_completeWrt {R T : Table (K × D) H σ}
+    (h : CompleteWrt R T) : CompleteWrt (demote R) (demote T) := by
+  intro k hR
+  simp only [Table.Present, demote] at hR ⊢
+  contrapose! hR
+  rw [Finset.sum_eq_zero_iff] at hR ⊢
+  intro d _
+  have hT : (T.rows (k, d)).map (fun f => Row.elim f (fun _ => some d)) = 0 :=
+    hR d (Finset.mem_univ d)
+  rw [Multiset.map_eq_zero] at hT ⊢
+  by_contra hR0
+  exact absurd hT (h (k, d) hR0)
+
+/-- **Fiber-level completeness**: every key present in `T` carries its whole
+population fiber.  This is the fact a reducing `map_bags` needs for the rows
+it emits (a fold over a partial group is silently wrong); it is weaker than
+`CompleteWrt` in that it says nothing about keys absent from `T` (an absent
+key manifests as an absent output row, not a wrong value). -/
+def FiberCompleteWrt (R T : Table K H σ) : Prop :=
+  ∀ k, T.Present k → T.rows k = R.rows k
+
+/-- **Trivial discharge at `card <= 1`.**  If the intended
+population `R` is `Functional` (the identity discipline as a fact about
+the world: an identity is observed once or not at all) and `T` holds only
+genuine observations (`T.rows k ≤ R.rows k`), then every present key of `T`
+carries its whole fiber: at `card <= 1` there is no middle ground between an
+absent group and a whole one.  This backs the checker rule that a reducing
+`map_bags` over a `singletons` store's full key needs no establishment step.
+It does *not* give key coverage (`CompleteWrt R T`): whole keys may still be
+absent from `T`, and coarsening converts exactly that absence into a fiber
+gap, which is where `demote_completeWrt` and the reference take over. -/
+theorem fiberCompleteWrt_of_functional {R T : Table K H σ}
+    (hR : Functional R) (hsub : ∀ k, T.rows k ≤ R.rows k) :
+    FiberCompleteWrt R T := by
+  intro k hk
+  have hk' : T.rows k ≠ 0 := hk
+  have hcard : (R.rows k).card ≤ (T.rows k).card := by
+    have h1 : (R.rows k).card ≤ 1 := hR k
+    have h2 : 0 < (T.rows k).card := Multiset.card_pos.mpr hk'
+    omega
+  exact Multiset.eq_of_le_of_card_le (hsub k) hcard
+
+/-- **Exhaustiveness of the demoted axis** (the `exhaustive(A)` fact,
+mechanized): no fine key the population has is absent from `T`.  This is
+exactly the absence that the coarsening below would otherwise turn into a
+gap inside a coarse fiber. -/
+def ExhaustiveOn (R T : Table (K × D) H σ) : Prop :=
+  ∀ k d, R.Present (k, d) → T.Present (k, d)
+
+/-- **`demote` preserves fiber completeness along an exhaustive axis**
+Fiber completeness at the fine key together with
+exhaustiveness of the demoted axis gives fiber completeness at the coarse
+key.
+
+The coarse bag is the sum of the fine fibers over `D`, so it suffices that
+the summands agree.  Where `T` has the fine key, fiber completeness makes
+its fiber whole; where `T` lacks it, exhaustiveness says the population
+lacks it too, so both summands are empty.  No key of `T` is left carrying
+a partial bag, which is what a reducing `map_bags` needs.
+
+This is the composition the checker performs when every demoted column
+carries `exhaustive`.  Drop the hypothesis and the fiber-gap witness
+recorded below applies: it fails exactly `ExhaustiveOn`. -/
+theorem demote_fiberCompleteWrt_of_exhaustive {R T : Table (K × D) H σ}
+    (hfib : FiberCompleteWrt R T) (hex : ExhaustiveOn R T) :
+    FiberCompleteWrt (demote R) (demote T) := by
+  intro k _
+  simp only [demote]
+  refine Finset.sum_congr rfl (fun d _ => ?_)
+  by_cases hT : T.Present (k, d)
+  · rw [hfib (k, d) hT]
+  · have hR : ¬ R.Present (k, d) := fun h => hT (hex k d h)
+    simp only [Table.Present, not_not] at hT hR
+    rw [hT, hR]
+
+/-! **`demote` does not preserve fiber-level completeness.**
+Against a fixed reference, "every present group is whole" is destroyed by
+a genuine coarsening.  `FiberCompleteWrt` never constrains a key *absent*
+from `T`, and `demote` merges exactly that absence into a coarse fiber,
+where it becomes a gap.  Witness: over key `Unit × Bool`, let the
+population `R` hold one row at each of `((), false)` and `((), true)`,
+and let `T` hold only the `false` row.  `FiberCompleteWrt R T` holds
+(the one present key carries its whole fiber), yet after `demote` the
+single coarse key `()` is present in `demote T` with a one-row bag where
+`demote R`'s has two, so `FiberCompleteWrt (demote R) (demote T)` fails.
+
+Contrast `demote_completeWrt` above, which is true because its reference
+coarsens *with* the table.  The checker tracks the fixed-reference fact,
+so a coarsening `demote` clears the qualifier and the establishment step
+sits after it; the clearing is conservative and needs no lemma
+Mechanizing this witness as `demote_not_fiberCompleteWrt`
+is left as an open formal item, alongside the
+`promote` preservation row. -/
+
+end SplitAlgebra

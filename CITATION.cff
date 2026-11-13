@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this development, please cite it as below."
+type: software
+title: "A mechanized algebra of tabular data handling: Lean 4 development"
+authors:
+  - family-names: Verri
+    given-names: Filipe Alves Neto
+    orcid: "https://orcid.org/0000-0002-8240-5129"
+    affiliation: "Instituto Curvelo; Universidade Federal de São Paulo (UNIFESP)"
+  - family-names: Zeferino
+    given-names: Paulo Giovani de Faria
+    affiliation: "Instituto Tecnológico de Aeronáutica (ITA); Universidade Federal de São Paulo (UNIFESP); Instituto Federal de Educação, Ciência e Tecnologia de São Paulo (IFSP)"
+  - family-names: Quiles
+    given-names: Marcos Gonçalves
+    orcid: "https://orcid.org/0000-0001-8147-554X"
+    affiliation: "Universidade Federal de São Paulo (UNIFESP)"
+license: MIT
+repository-code: "https://github.com/verri/split-algebra"
+keywords:
+  - Lean 4
+  - Mathlib
+  - formal verification
+  - tabular data
+  - data leakage
+  - split invariance

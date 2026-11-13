@@ -1,0 +1,32 @@
+{
+  "title": "A mechanized algebra of tabular data handling: Lean 4 development",
+  "upload_type": "software",
+  "description": "<p>Lean 4 development behind the paper <em>Split Safety for Tabular Data Handling: An Algebra and a Completeness Theorem</em>. Tables are modeled as key-indexed multisets of rows. The thirteen modules of the library <code>SplitAlgebra</code> check every lemma, proposition and theorem of the paper: the classification of the operations as split invariant, union homomorphisms and split safe, the equational laws and inverse pairs, the rectangle facts, and the completeness theorems (strict fiber maps, reindex and gather maps, binary joins under aligned splits). The development contains no <code>sorry</code> and depends only on the axioms <code>propext</code>, <code>Classical.choice</code> and <code>Quot.sound</code>.</p>",
+  "creators": [
+    {
+      "name": "Verri, Filipe Alves Neto",
+      "affiliation": "Instituto Curvelo; Universidade Federal de São Paulo (UNIFESP)",
+      "orcid": "0000-0002-8240-5129"
+    },
+    {
+      "name": "Zeferino, Paulo Giovani de Faria",
+      "affiliation": "Instituto Tecnológico de Aeronáutica (ITA); Universidade Federal de São Paulo (UNIFESP); Instituto Federal de Educação, Ciência e Tecnologia de São Paulo (IFSP)"
+    },
+    {
+      "name": "Quiles, Marcos Gonçalves",
+      "affiliation": "Universidade Federal de São Paulo (UNIFESP)",
+      "orcid": "0000-0001-8147-554X"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "Lean 4",
+    "Mathlib",
+    "formal verification",
+    "tabular data",
+    "data leakage",
+    "split invariance",
+    "multisets"
+  ]
+}
